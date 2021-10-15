@@ -3,9 +3,6 @@ package io.quarkus.kubernetes.deployment;
 
 import static io.quarkus.kubernetes.deployment.Constants.DEFAULT_HTTP_PORT;
 import static io.quarkus.kubernetes.deployment.Constants.DEFAULT_S2I_IMAGE_NAME;
-import static io.quarkus.kubernetes.deployment.Constants.DEPLOYMENT_CONFIG;
-import static io.quarkus.kubernetes.deployment.Constants.DEPLOYMENT_CONFIG_GROUP;
-import static io.quarkus.kubernetes.deployment.Constants.DEPLOYMENT_CONFIG_VERSION;
 import static io.quarkus.kubernetes.deployment.Constants.HTTP_PORT;
 import static io.quarkus.kubernetes.deployment.Constants.OPENSHIFT;
 import static io.quarkus.kubernetes.deployment.Constants.OPENSHIFT_APP_RUNTIME;
@@ -43,6 +40,7 @@ import io.quarkus.deployment.builditem.ApplicationInfoBuildItem;
 import io.quarkus.deployment.metrics.MetricsCapabilityBuildItem;
 import io.quarkus.deployment.pkg.PackageConfig;
 import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
+import io.quarkus.kubernetes.deployment.OpenshiftConfig.DeploymentResourceKind;
 import io.quarkus.kubernetes.spi.ConfiguratorBuildItem;
 import io.quarkus.kubernetes.spi.CustomProjectRootBuildItem;
 import io.quarkus.kubernetes.spi.DecoratorBuildItem;
@@ -68,13 +66,16 @@ public class OpenshiftProcessor {
             BuildProducer<KubernetesResourceMetadataBuildItem> resourceMeta) {
         List<String> targets = KubernetesConfigUtil.getUserSpecifiedDeploymentTargets();
         boolean openshiftEnabled = targets.contains(OPENSHIFT);
-        deploymentTargets.produce(new KubernetesDeploymentTargetBuildItem(OPENSHIFT, DEPLOYMENT_CONFIG,
-                DEPLOYMENT_CONFIG_GROUP, DEPLOYMENT_CONFIG_VERSION, OPENSHIFT_PRIORITY,
+        String kind = config.getDepoymentResourceKind();
+        String group = config.getDepoymentResourceGroup();
+        String version = config.getDepoymentResourceVersion();
+
+        deploymentTargets.produce(new KubernetesDeploymentTargetBuildItem(OPENSHIFT, kind, group, version, OPENSHIFT_PRIORITY,
                 openshiftEnabled));
         if (openshiftEnabled) {
             String name = ResourceNameUtil.getResourceName(config, applicationInfo);
-            resourceMeta.produce(new KubernetesResourceMetadataBuildItem(OPENSHIFT, DEPLOYMENT_CONFIG_GROUP,
-                    DEPLOYMENT_CONFIG_VERSION, DEPLOYMENT_CONFIG, name));
+            resourceMeta.produce(new KubernetesResourceMetadataBuildItem(OPENSHIFT, group,
+                    version, kind, name));
         }
     }
 
@@ -166,8 +167,17 @@ public class OpenshiftProcessor {
             result.add(new DecoratorBuildItem(new RemoveOptionalFromConfigMapKeySelectorDecorator()));
         }
 
+        if (config.deploymentKind == DeploymentResourceKind.Deployment) {
+            result.add(new DecoratorBuildItem(OPENSHIFT, new RemoveDeploymentConfigResourceDecorator(name)));
+            result.add(new DecoratorBuildItem(OPENSHIFT, new AddDeploymentResourceDecorator(name, config)));
+        }
+
         if (config.getReplicas() != 1) {
+            // This only affects DeploymentConfig
             result.add(new DecoratorBuildItem(OPENSHIFT, new ApplyReplicasDecorator(name, config.getReplicas())));
+            // This only affects Deployment
+            result.add(new DecoratorBuildItem(OPENSHIFT,
+                    new io.dekorate.kubernetes.decorator.ApplyReplicasDecorator(name, config.getReplicas())));
         }
         image.ifPresent(i -> {
             result.add(new DecoratorBuildItem(OPENSHIFT, new ApplyContainerImageDecorator(name, i.getImage())));
