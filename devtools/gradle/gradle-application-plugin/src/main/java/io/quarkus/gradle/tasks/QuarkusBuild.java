@@ -8,11 +8,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
+
+import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.java.archives.Attributes;
+import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.MapProperty;
 import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
@@ -29,10 +36,11 @@ import io.quarkus.bootstrap.app.QuarkusBootstrap;
 import io.quarkus.bootstrap.model.ApplicationModel;
 import io.quarkus.bootstrap.resolver.AppModelResolverException;
 import io.quarkus.gradle.dsl.Manifest;
+import io.quarkus.maven.dependency.Dependency;
 import io.quarkus.maven.dependency.GACTV;
 import io.quarkus.runtime.util.StringUtil;
 
-public class QuarkusBuild extends QuarkusTask {
+public abstract class QuarkusBuild extends QuarkusTask {
 
     private static final String NATIVE_PROPERTY_NAMESPACE = "quarkus.native";
     private static final String MANIFEST_SECTIONS_PROPERTY_PREFIX = "quarkus.package.manifest.manifest-sections";
@@ -41,8 +49,13 @@ public class QuarkusBuild extends QuarkusTask {
     private List<String> ignoredEntries = new ArrayList<>();
     private Manifest manifest = new Manifest();
 
+    @Inject
     public QuarkusBuild() {
         super("Quarkus builds a runner jar based on the build jar");
+    }
+
+    public QuarkusBuild(String description) {
+        super(description);
     }
 
     public QuarkusBuild nativeArgs(Action<Map<String, ?>> action) {
@@ -53,6 +66,14 @@ public class QuarkusBuild extends QuarkusTask {
         }
         return this;
     }
+
+    @Optional
+    @Input
+    public abstract ListProperty<String> getForcedDependencies();
+
+    @Optional
+    @Input
+    public abstract MapProperty<String, String> getForcedProperties();
 
     @Optional
     @Input
@@ -125,14 +146,23 @@ public class QuarkusBuild extends QuarkusTask {
     @TaskAction
     public void buildQuarkus() {
         final ApplicationModel appModel;
+        final List<Dependency> forcedDependencies = getForcedDependencies().getOrElse(Collections.emptyList()).stream()
+                .map(GACTV::fromString)
+                .map(a -> io.quarkus.maven.dependency.Dependency.of(a.getGroupId(), a.getArtifactId(), a.getVersion()))
+                .collect(Collectors.toList());
+
+        final Map<String, String> forcedProperties = getForcedProperties().getOrElse(Collections.emptyMap());
+
         try {
-            appModel = extension().getAppModelResolver().resolveModel(new GACTV(getProject().getGroup().toString(),
-                    getProject().getName(), getProject().getVersion().toString()));
+            appModel = extension().getAppModelResolver().resolveManagedModel(
+                    new GACTV(getProject().getGroup().toString(), getProject().getName(), getProject().getVersion().toString()),
+                    forcedDependencies, null, Collections.emptySet());
         } catch (AppModelResolverException e) {
             throw new GradleException("Failed to resolve Quarkus application model for " + getProject().getPath(), e);
         }
 
         final Properties effectiveProperties = getBuildSystemProperties(appModel.getAppArtifact());
+        effectiveProperties.putAll(forcedProperties);
         if (ignoredEntries != null && ignoredEntries.size() > 0) {
             String joinedEntries = String.join(",", ignoredEntries);
             effectiveProperties.setProperty("quarkus.package.user-configured-ignored-entries", joinedEntries);
@@ -149,6 +179,7 @@ public class QuarkusBuild extends QuarkusTask {
                 .setAppArtifact(appModel.getAppArtifact())
                 .setLocalProjectDiscovery(false)
                 .setIsolateDeployment(true)
+                .setForcedDependencies(forcedDependencies)
                 .build().bootstrap()) {
 
             // Processes launched from within the build task of Gradle (daemon) lose content
