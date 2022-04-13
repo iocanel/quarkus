@@ -8,6 +8,9 @@ import io.quarkus.container.image.deployment.util.ImageUtil;
 public enum S2iBaseJavaImage {
 
     //We only compare `repositories` so registries and tags are stripped
+
+    UBI_11("registry.access.redhat.com/ubi8/openjdk-11:latest", "JAVA_MAIN_CLASS", "JAVA_APP_JAR", "JAVA_LIB_DIR",
+            "JAVA_CLASSPATH", "JAVA_OPTIONS"),
     FABRIC8("fabric8/s2i-java:latest", "JAVA_MAIN_CLASS", "JAVA_APP_JAR", "JAVA_LIB_DIR", "JAVA_CLASSPATH", "JAVA_OPTIONS"),
     OPENJDK_8_RHEL7("redhat-openjdk-18/openjdk18-openshift:latest", "JAVA_MAIN_CLASS", "JAVA_APP_JAR", "JAVA_LIB_DIR",
             "JAVA_CLASSPATH", "JAVA_OPTIONS"),
