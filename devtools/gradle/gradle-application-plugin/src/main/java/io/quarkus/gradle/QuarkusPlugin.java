@@ -4,6 +4,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -182,16 +183,6 @@ public class QuarkusPlugin implements Plugin<Project> {
         });
 
         configureBuildNativeTask(project);
-
-        TaskProvider<ImageBuild> imageBuild = tasks.register(IMAGE_BUILD_TASK_NAME, ImageBuild.class, buildConfig);
-        imageBuild.configure(task -> {
-            task.finalizedBy(quarkusBuild);
-        });
-
-        TaskProvider<ImagePush> imagePush = tasks.register(IMAGE_PUSH_TASK_NAME, ImagePush.class, buildConfig);
-        imagePush.configure(task -> {
-            task.finalizedBy(quarkusBuild);
-        });
 
         final Consumer<Test> configureTestTask = t -> {
             // Quarkus test configuration action which should be executed before any Quarkus test

@@ -12,8 +12,6 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
-import javax.inject.Inject;
-
 import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.FileCollection;
