@@ -14,10 +14,10 @@ public class ApplyExpositionConfigurator extends Configurator<BaseConfigFluent> 
     @Override
     public void visit(BaseConfigFluent config) {
         if (expositionConfig.expose) {
-            config.withExpose(true);
-            if (expositionConfig.host.isPresent()) {
-                config.withHost(expositionConfig.host.get());
-            }
+            // config.withExpose(true);
+            // if (expositionConfig.host.isPresent()) {
+            //     config.withHost(expositionConfig.host.get());
+            // }
         }
     }
 }
