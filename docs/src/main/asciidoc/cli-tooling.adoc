@@ -595,7 +595,7 @@ quarkus image build buildpack --builder-image <<your builder image>>
 
 ==== Pushing
 
-Similar to `build` the `push` command works similarly. It allows allows for pushing images and exposes some basic options related to the target registry.
+The `image push` command is similar to `image build`, and surfaces some basic options required to push images to a target container registry.
 
 [source, shell]
 ----
