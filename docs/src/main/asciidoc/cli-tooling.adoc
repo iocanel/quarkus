@@ -576,7 +576,7 @@ To build the image for your project:
 quarkus image build
 ----
 
-The build command can be used directly, or a subcommand can be selected. The available subcommands are:
+The `image build` command can be used directly, or a subcommand can be selected. The available subcommands are:
 
 - docker
 - buildpacks
