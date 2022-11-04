@@ -566,7 +566,7 @@ complete -F _complete_quarkus q
 ----
 
 
-=== Image building and pushing
+=== Container images
 
 The quarkus CLI allows building container images without tampering with your project configuration (adding / removing container image extensions).
 To perform a build:
