@@ -16,7 +16,7 @@ import picocli.CommandLine.ExitCode;
                         + "%n" }, headerHeading = "%n", commandListHeading = "%nCommands:%n", synopsisHeading = "%nUsage: ", parameterListHeading = "%n", optionListHeading = "Options:%n")
 public class Build extends BaseImageCommand {
 
-    private static final Map<BuildTool, String> ACTION_MAPPING = Map.of(BuildTool.MAVEN, "compile quarkus:image-build",
+    private static final Map<BuildTool, String> ACTION_MAPPING = Map.of(BuildTool.MAVEN, "quarkus:image-build",
             BuildTool.GRADLE, "imageBuild");
 
     @Override
@@ -41,6 +41,13 @@ public class Build extends BaseImageCommand {
             if (runMode.isDryRun()) {
                 System.out.println(commandArgs.showCommand());
                 return ExitCode.OK;
+            }
+            if (getRunner().getBuildTool() == BuildTool.MAVEN) {
+                BuildSystemRunner.BuildCommandArgs compileArgs = runner.prepareAction("compile", buildOptions, runMode, params);
+                int compileExitCode = runner.run(compileArgs);
+                if (compileExitCode != ExitCode.OK) {
+                    return compileExitCode;
+                }
             }
             return runner.run(commandArgs);
         } catch (Exception e) {
