@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
 
 import io.quarkus.maven.dependency.ArtifactDependency;
@@ -26,10 +27,20 @@ public class AbstractImageMojo extends BuildMojo {
     @Parameter(defaultValue = "docker", property = "quarkus.container-image.builder")
     Builder builder = Builder.docker;
 
+    @Parameter(property = "quarkus.container-image.dry-run")
+    boolean dryRun;
+
     @Override
     protected boolean beforeExecute() throws MojoExecutionException {
         systemProperties.put("quarkus.container-image.builder", builder.name());
         return super.beforeExecute();
+    }
+
+    @Override
+    public void execute() throws MojoExecutionException, MojoFailureException {
+        if (!dryRun) {
+            super.execute();
+        }
     }
 
     @Override

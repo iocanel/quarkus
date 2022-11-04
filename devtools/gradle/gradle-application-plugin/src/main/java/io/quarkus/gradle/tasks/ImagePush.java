@@ -2,6 +2,7 @@
 package io.quarkus.gradle.tasks;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,6 +32,9 @@ public abstract class ImagePush extends ImageTask {
 
     @Override
     public Map<String, String> forcedProperties() {
+        if (dryRun) {
+            return Collections.emptyMap();
+        }
         return Map.of("quarkus.container-image.push", "true");
     }
 

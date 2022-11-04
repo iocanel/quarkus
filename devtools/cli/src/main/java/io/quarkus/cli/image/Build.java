@@ -6,6 +6,7 @@ import java.util.Optional;
 import io.quarkus.cli.build.BuildSystemRunner;
 import io.quarkus.devtools.project.BuildTool;
 import picocli.CommandLine;
+import picocli.CommandLine.ExitCode;
 
 @CommandLine.Command(name = "build", sortOptions = false, showDefaultValues = true, mixinStandardHelpOptions = false, header = "Build a container image.", description = "%n"
         + "This command will build a container image for the project.", subcommands = { Docker.class, Buildpack.class,
@@ -37,6 +38,10 @@ public class Build extends BaseImageCommand {
             String action = getAction().orElseThrow(
                     () -> new IllegalStateException("Unknown image push action for " + runner.getBuildTool().name()));
             BuildSystemRunner.BuildCommandArgs commandArgs = runner.prepareAction(action, buildOptions, runMode, params);
+            if (runMode.isDryRun()) {
+                System.out.println(commandArgs.showCommand());
+                return ExitCode.OK;
+            }
             return runner.run(commandArgs);
         } catch (Exception e) {
             return output.handleCommandException(e, "Unable to build image: " + e.getMessage());
