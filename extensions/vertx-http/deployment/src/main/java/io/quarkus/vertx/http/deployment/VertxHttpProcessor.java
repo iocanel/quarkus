@@ -43,7 +43,6 @@ import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildI
 import io.quarkus.deployment.builditem.nativeimage.ServiceProviderBuildItem;
 import io.quarkus.deployment.logging.LogCleanupFilterBuildItem;
 import io.quarkus.kubernetes.spi.KubernetesPortBuildItem;
-import io.quarkus.kubernetes.spi.RuntimeConfigUtil;
 import io.quarkus.netty.runtime.virtual.VirtualServerChannel;
 import io.quarkus.runtime.LaunchMode;
 import io.quarkus.runtime.LiveReloadConfig;
@@ -175,24 +174,16 @@ class VertxHttpProcessor {
 
     @BuildStep
     public void kubernetes(BuildProducer<KubernetesPortBuildItem> kubernetesPorts) {
-        if (isSslConfigured()) {
-            // ssl is not disabled
-            int sslPort = RuntimeConfigUtil.getConfigProperty("quarkus.http.ssl-port", Integer.class, 8443, "The https port");
-            kubernetesPorts.produce(new KubernetesPortBuildItem(sslPort, "https"));
-        }
-
-        int port = RuntimeConfigUtil.getConfigProperty("quarkus.http.port", Integer.class, 8080, "The http port");
-        kubernetesPorts.produce(new KubernetesPortBuildItem(port, "http"));
+        kubernetesPorts.produce(KubernetesPortBuildItem.fromRuntimeConfiguration("http", "quarkus.http.port", 8080, true));
+        kubernetesPorts.produce(
+                KubernetesPortBuildItem.fromRuntimeConfiguration("https", "quarkus.http.ssl-port", 8443, isSslConfigured()));
     }
 
     @BuildStep
     public KubernetesPortBuildItem kubernetesForManagement(
             ManagementInterfaceBuildTimeConfig managementInterfaceBuildTimeConfig) {
-        if (managementInterfaceBuildTimeConfig.enabled) {
-            int port = ConfigProvider.getConfig().getOptionalValue("quarkus.management.port", Integer.class).orElse(9000);
-            return new KubernetesPortBuildItem(port, "management");
-        }
-        return null;
+        return KubernetesPortBuildItem.fromRuntimeConfiguration("management", "quarkus.management.port", 9000,
+                managementInterfaceBuildTimeConfig.enabled);
     }
 
     @BuildStep

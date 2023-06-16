@@ -96,6 +96,7 @@ import io.quarkus.kubernetes.spi.KubernetesProbePortNameBuildItem;
 import io.quarkus.kubernetes.spi.KubernetesRoleBindingBuildItem;
 import io.quarkus.kubernetes.spi.KubernetesRoleBuildItem;
 import io.quarkus.kubernetes.spi.KubernetesServiceAccountBuildItem;
+import io.quarkus.kubernetes.spi.PropertyUtil;
 import io.quarkus.kubernetes.spi.RoleRef;
 import io.quarkus.kubernetes.spi.Subject;
 
@@ -160,9 +161,17 @@ public class KubernetesCommonHelper {
     public static Map<String, Port> combinePorts(List<KubernetesPortBuildItem> ports,
             PlatformConfiguration config) {
         Map<String, Port> allPorts = new HashMap<>();
+        Map<String, Port> activePorts = new HashMap<>();
+
         allPorts.putAll(verifyPorts(ports).entrySet().stream()
                 .map(e -> new PortBuilder().withName(e.getKey()).withContainerPort(e.getValue()).build())
                 .collect(Collectors.toMap(Port::getName, p -> p)));
+
+        activePorts.putAll(
+                verifyPorts(ports.stream().filter(p -> p.isEnabled()).collect(Collectors.toList()))
+                        .entrySet().stream()
+                        .map(e -> new PortBuilder().withName(e.getKey()).withContainerPort(e.getValue()).build())
+                        .collect(Collectors.toMap(Port::getName, p -> p)));
 
         config.getPorts().entrySet().forEach(e -> {
             String name = e.getKey();
@@ -182,9 +191,24 @@ public class KubernetesCommonHelper {
                             .withPath(Strings.isNotNullOrEmpty(configuredPort.getPath()) ? configuredPort.getPath()
                                     : buildItemPort.getPath())
                             .build();
-            allPorts.put(name, combinedPort);
+            activePorts.put(name, combinedPort);
         });
-        return allPorts;
+        return activePorts;
+    }
+
+    /**
+     * Creates the configurator build items.
+     */
+    public static void printMessageAboutPortsThatCantChange(String target, List<KubernetesPortBuildItem> ports,
+            PlatformConfiguration configuration) {
+        ports.stream().forEach(p -> {
+            boolean enabled = p.isEnabled() || configuration.getPorts().containsKey(p.getName());
+            if (enabled) {
+                String kubernetesPropertyName = "quarkus." + target + ".ports." + p.getName() + ".container-port";
+                PropertyUtil.printMessages(String.format("The container port %s", p.getName()), kubernetesPropertyName,
+                        p.getSource());
+            }
+        });
     }
 
     /**
