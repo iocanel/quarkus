@@ -43,6 +43,7 @@ import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildI
 import io.quarkus.deployment.builditem.nativeimage.ServiceProviderBuildItem;
 import io.quarkus.deployment.logging.LogCleanupFilterBuildItem;
 import io.quarkus.kubernetes.spi.KubernetesPortBuildItem;
+import io.quarkus.kubernetes.spi.RuntimeConfigUtil;
 import io.quarkus.netty.runtime.virtual.VirtualServerChannel;
 import io.quarkus.runtime.LaunchMode;
 import io.quarkus.runtime.LiveReloadConfig;
@@ -176,13 +177,11 @@ class VertxHttpProcessor {
     public void kubernetes(BuildProducer<KubernetesPortBuildItem> kubernetesPorts) {
         if (isSslConfigured()) {
             // ssl is not disabled
-            int sslPort = ConfigProvider.getConfig()
-                    .getOptionalValue("quarkus.http.ssl-port", Integer.class)
-                    .orElse(8443);
+            int sslPort = RuntimeConfigUtil.getConfigProperty("quarkus.http.ssl-port", Integer.class, 8443, "The https port");
             kubernetesPorts.produce(new KubernetesPortBuildItem(sslPort, "https"));
         }
 
-        int port = ConfigProvider.getConfig().getOptionalValue("quarkus.http.port", Integer.class).orElse(8080);
+        int port = RuntimeConfigUtil.getConfigProperty("quarkus.http.port", Integer.class, 8080, "The http port");
         kubernetesPorts.produce(new KubernetesPortBuildItem(port, "http"));
     }
 

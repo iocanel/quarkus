@@ -182,31 +182,9 @@ public class KubernetesCommonHelper {
                             .withPath(Strings.isNotNullOrEmpty(configuredPort.getPath()) ? configuredPort.getPath()
                                     : buildItemPort.getPath())
                             .build();
-
-            // Special handling for ports with mapped configuration. We look up the container port from the Quarkus configuration.
-            if (combinedPort.getContainerPort() == null) {
-                Integer containerPort = RuntimePropertiesUtil.getPortNumberFromRuntime(name);
-                if (containerPort != null) {
-                    combinedPort = new PortBuilder(combinedPort)
-                            .withContainerPort(containerPort)
-                            .build();
-                }
-            }
-
             allPorts.put(name, combinedPort);
         });
         return allPorts;
-    }
-
-    /**
-     * Creates the configurator build items.
-     */
-    public static void printMessageAboutPortsThatCantChange(String target, List<KubernetesPortBuildItem> ports,
-            PlatformConfiguration config) {
-        Collection<Port> allPorts = combinePorts(ports, config).values();
-        for (Port port : allPorts) {
-            RuntimePropertiesUtil.printTraceIfRuntimePropertyIsSet(target, port);
-        }
     }
 
     /**

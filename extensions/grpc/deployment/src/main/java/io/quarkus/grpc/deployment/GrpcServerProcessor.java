@@ -85,6 +85,7 @@ import io.quarkus.grpc.runtime.supports.context.GrpcRequestContextGrpcIntercepto
 import io.quarkus.grpc.runtime.supports.exc.DefaultExceptionHandlerProvider;
 import io.quarkus.grpc.runtime.supports.exc.ExceptionInterceptor;
 import io.quarkus.kubernetes.spi.KubernetesPortBuildItem;
+import io.quarkus.kubernetes.spi.RuntimeConfigUtil;
 import io.quarkus.netty.deployment.MinNettyAllocatorMaxOrderBuildItem;
 import io.quarkus.runtime.LaunchMode;
 import io.quarkus.smallrye.health.deployment.spi.HealthBuildItem;
@@ -502,8 +503,8 @@ public class GrpcServerProcessor {
                     .orElse(true);
             if (useSeparateServer) {
                 // Only expose the named port "grpc" if the gRPC server is exposed using a separate server.
-                int port = ConfigProvider.getConfig().getOptionalValue("quarkus.grpc.server.port", Integer.class)
-                        .orElse(9000);
+                int port = RuntimeConfigUtil.getConfigProperty("quarkus.grpc.server.port", Integer.class, 9000,
+                        "The grpc server port");
                 return new KubernetesPortBuildItem(port, "grpc");
             }
         }
