@@ -50,7 +50,6 @@ import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.model.Profile;
 import org.apache.maven.model.Resource;
-import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -105,6 +104,7 @@ import io.quarkus.maven.components.CompilerOptions;
 import io.quarkus.maven.components.MavenVersionEnforcer;
 import io.quarkus.maven.components.QuarkusWorkspaceProvider;
 import io.quarkus.maven.dependency.ArtifactCoords;
+import io.quarkus.maven.dependency.ArtifactDependency;
 import io.quarkus.maven.dependency.ArtifactKey;
 import io.quarkus.maven.dependency.ResolvedDependency;
 import io.quarkus.paths.PathList;
@@ -118,7 +118,7 @@ import io.smallrye.common.expression.Expression;
  * You can use this dev mode in a remote container environment with {@code remote-dev}.
  */
 @Mojo(name = "dev", defaultPhase = LifecyclePhase.PREPARE_PACKAGE, requiresDependencyResolution = ResolutionScope.TEST, threadSafe = true)
-public class DevMojo extends AbstractMojo {
+public class DevMojo extends QuarkusBootstrapMojo {
 
     private static final Set<String> IGNORED_PHASES = Set.of(
             "pre-clean", "clean", "post-clean");
@@ -384,7 +384,7 @@ public class DevMojo extends AbstractMojo {
     }
 
     @Override
-    public void execute() throws MojoFailureException, MojoExecutionException {
+    public void doExecute() throws MojoFailureException, MojoExecutionException {
 
         if (project.getPackaging().equals(ArtifactCoords.TYPE_POM)) {
             getLog().info("Type of the artifact is POM, skipping dev goal");
@@ -1296,6 +1296,11 @@ public class DevMojo extends AbstractMojo {
                     d.getScope(), d.isOptional(), exclusions));
         });
 
+        // Add DevUI dependencies
+        final DefaultArtifact vertxHttpJar = new DefaultArtifact(IO_QUARKUS, "quarkus-vertx-http", ArtifactCoords.TYPE_JAR,
+                devModeVersion);
+        final DefaultArtifact vertxHttpDeploymentJar = new DefaultArtifact(IO_QUARKUS, "quarkus-vertx-http-deployment",
+                ArtifactCoords.TYPE_JAR, devModeVersion);
         final DefaultArtifact devModeJar = new DefaultArtifact(devModeGroupId, devModeArtifactId, ArtifactCoords.TYPE_JAR,
                 devModeVersion);
         final DependencyResult cpRes = repoSystem.resolveDependencies(repoSession,
@@ -1307,6 +1312,9 @@ public class DevMojo extends AbstractMojo {
                                                 ArtifactCoords.TYPE_JAR, "1.0"))
                                         .setManagedDependencies(managed)
                                         .setDependencies(List.of(
+                                                new org.eclipse.aether.graph.Dependency(vertxHttpJar, JavaScopes.RUNTIME),
+                                                new org.eclipse.aether.graph.Dependency(vertxHttpDeploymentJar,
+                                                        JavaScopes.RUNTIME),
                                                 new org.eclipse.aether.graph.Dependency(devModeJar, JavaScopes.RUNTIME),
                                                 new org.eclipse.aether.graph.Dependency(new DefaultArtifact(
                                                         coreDeployment.getGroupId(), coreDeployment.getArtifactId(),
@@ -1323,6 +1331,7 @@ public class DevMojo extends AbstractMojo {
                         && a.getGroupId().equals(IO_QUARKUS)) {
                     builder.jvmArgs("-javaagent:" + a.getFile().getAbsolutePath());
                 } else {
+                    System.out.println("\t\t\t\tResolved " + a.getGroupId() + ":" + a.getArtifactId());
                     builder.classpathEntry(
                             ArtifactKey.of(a.getGroupId(), a.getArtifactId(), a.getClassifier(), a.getExtension()),
                             a.getFile());
@@ -1422,4 +1431,22 @@ public class DevMojo extends AbstractMojo {
             return execution == null ? null : execution.getId();
         }
     }
+
+    @Override
+    protected boolean beforeExecute() throws MojoExecutionException, MojoFailureException {
+        return true;
+    }
+
+    @Override
+    protected List<io.quarkus.maven.dependency.Dependency> forcedDependencies(LaunchMode mode) {
+        System.out.println("\n\n\n\t\t\tAdding quarkus-vertx-http");
+        List<io.quarkus.maven.dependency.Dependency> dependencies = new ArrayList<>();
+        String version = project.getDependencyManagement().getDependencies().stream()
+                .filter(d -> d.getGroupId().equals(IO_QUARKUS) && d.getArtifactId().startsWith("quarkus-core"))
+                .map(Dependency::getVersion).findFirst().orElse("999-SNAPSHOT");
+        dependencies
+                .add(new ArtifactDependency(IO_QUARKUS, "quarkus-vertx-http", null, ArtifactCoords.TYPE_JAR, version));
+        return dependencies;
+    }
+
 }
