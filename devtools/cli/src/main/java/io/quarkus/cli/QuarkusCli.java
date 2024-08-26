@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 
 import jakarta.inject.Inject;
 
+import io.quarkus.cli.common.CommandWithOutput;
 import io.quarkus.cli.common.HelpOption;
 import io.quarkus.cli.common.OutputOptionMixin;
 import io.quarkus.cli.common.PropertiesOptions;
@@ -61,7 +62,7 @@ import picocli.CommandLine.UnmatchedArgumentException;
         Version.class,
         CliPlugins.class,
         Completion.class }, scope = ScopeType.INHERIT, sortOptions = false, showDefaultValues = true, versionProvider = Version.class, subcommandsRepeatable = false, mixinStandardHelpOptions = false, commandListHeading = "%nCommands:%n", synopsisHeading = "%nUsage: ", optionListHeading = "Options:%n", headerHeading = "%n", parameterListHeading = "%n")
-public class QuarkusCli implements QuarkusApplication, Callable<Integer> {
+public class QuarkusCli implements QuarkusApplication, CommandWithOutput, Callable<Integer> {
     static {
         System.setProperty("picocli.endofoptions.description", "End of command line options.");
     }

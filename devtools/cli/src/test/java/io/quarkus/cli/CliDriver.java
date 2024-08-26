@@ -21,6 +21,7 @@ import java.util.function.UnaryOperator;
 
 import org.junit.jupiter.api.Assertions;
 
+import io.quarkus.cli.common.GenericCliDriver;
 import picocli.CommandLine;
 
 public class CliDriver {
@@ -190,7 +191,7 @@ public class CliDriver {
         System.out.println(msg);
     }
 
-    public static class Result {
+    public static class Result extends GenericCliDriver.Result {
         int exitCode;
         String stdout;
         String stderr;
